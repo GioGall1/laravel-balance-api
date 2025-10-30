@@ -106,4 +106,77 @@ final class BalanceService
             return $new;
         });
     }
+
+    public function transfer(int $fromUserId, int $toUserId, string $amount, ?string $comment = null): string
+    {
+        // нормализуем сумму до строки с 2 знаками
+        $amount = number_format((float)$amount, 2, '.', '');
+
+        if (bccomp($amount, '0.00', 2) <= 0) {
+            throw new \InvalidArgumentException('Amount must be greater than 0');
+        }
+
+        return DB::transaction(function () use ($fromUserId, $toUserId, $amount, $comment): string {
+            // детерминированно блокируем пользователей по возрастанию id (анти-дедлок)
+            $firstId  = min($fromUserId, $toUserId);
+            $secondId = max($fromUserId, $toUserId);
+
+            $users = User::whereIn('id', [$firstId, $secondId])->lockForUpdate()->get()->keyBy('id');
+
+            $fromUser = $users->get($fromUserId);
+            $toUser   = $users->get($toUserId);
+
+            if (!$fromUser || !$toUser) {
+                throw new NotFoundHttpException('User not found');
+            }
+
+            // блокируем/берём записи балансов
+            $fromBalance = Balance::where('user_id', $fromUserId)->lockForUpdate()->first();
+            $toBalance   = Balance::where('user_id', $toUserId)->lockForUpdate()->first();
+
+            // если у получателя нет записи — создадим (по ТЗ записей может не быть до первого депозита, но для transfer ok создать)
+            if (!$toBalance) {
+                $toBalance = Balance::create(['user_id' => $toUserId, 'balance' => '0.00']);
+            }
+            // у отправителя тоже может не быть записи — тогда баланс считаем 0.00
+            $fromCurrent = $fromBalance?->balance ?? '0.00';
+
+            // проверка достаточности средств (не уходим в минус)
+            if (bccomp($fromCurrent, $amount, 2) < 0) {
+                throw new DomainException('Недостаточно средств для перевода');
+            }
+
+            // считаем новые значения
+            $newFrom = bcsub($fromCurrent, $amount, 2);
+            $newTo   = bcadd($toBalance->balance, $amount, 2);
+
+            // апдейты/создание записи баланса отправителя
+            if ($fromBalance) {
+                $fromBalance->update(['balance' => $newFrom]);
+            } else {
+                $fromBalance = Balance::create(['user_id' => $fromUserId, 'balance' => $newFrom]);
+            }
+            $toBalance->update(['balance' => $newTo]);
+
+            // лог транзакций (две записи)
+            Transaction::create([
+                'user_id'         => $fromUserId,
+                'type'            => Transaction::TYPE_TRANSFER_OUT,
+                'amount'          => $amount,
+                'comment'         => $comment,
+                'related_user_id' => $toUserId,
+            ]);
+
+            Transaction::create([
+                'user_id'         => $toUserId,
+                'type'            => Transaction::TYPE_TRANSFER_IN,
+                'amount'          => $amount,
+                'comment'         => $comment,
+                'related_user_id' => $fromUserId,
+            ]);
+
+            // возвращаем новый баланс отправителя (в едином стиле с /withdraw)
+            return $newFrom;
+        });
+    }
 }

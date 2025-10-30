@@ -5,8 +5,9 @@ namespace App\Http\Controllers;
 use App\Services\BalanceService;
 use Illuminate\Http\JsonResponse;
 use App\Http\Requests\DepositRequest;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use App\Http\Requests\WithdrawRequest;
+use App\Http\Requests\TransferRequest;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use InvalidArgumentException;
 use Throwable;
 use DomainException;
@@ -87,6 +88,38 @@ class BalanceController extends Controller
 
         } catch (DomainException $e) {
             return response()->json(['error' => $e->getMessage()], 409); // недостаточно средств
+        } catch (\Throwable $e) {
+            return response()->json(['message' => 'Internal server error'], 500);
+        }
+    }
+
+     /**
+     * Перевод средств пользователю
+     */
+    public function transfer(TransferRequest $request): JsonResponse
+    {
+        try {
+            $fromId  = (int) $request->integer('from_user_id');
+            $toId    = (int) $request->integer('to_user_id');
+            $amount  = (string) $request->input('amount');
+            $comment = (string) $request->input('comment', '');
+
+            $newFromBalance = $this->balanceService->transfer($fromId, $toId, $amount, $comment);
+
+            return response()->json([
+                'from_user_id' => $fromId,
+                'to_user_id'   => $toId,
+                'amount'       => (float) $amount,
+                'balance'      => (float) $newFromBalance, // новый баланс отправителя
+            ], 200);
+
+        } catch (NotFoundHttpException $e) {
+            return response()->json(['message' => $e->getMessage()], 404);
+
+        } catch (DomainException $e) {
+            // недостаточно средств или бизнес-конфликт
+            return response()->json(['message' => $e->getMessage()], 409);
+
         } catch (\Throwable $e) {
             return response()->json(['message' => 'Internal server error'], 500);
         }
