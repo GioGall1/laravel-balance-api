@@ -50,4 +50,9 @@ class User extends Authenticatable
     {
         return $this->hasOne(\App\Models\Balance::class);
     }
+
+    public function transactions() 
+    { 
+        return $this->hasMany(\App\Models\Transaction::class); 
+    }
 }

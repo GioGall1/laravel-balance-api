@@ -9,3 +9,4 @@ Route::get('/user', function (Request $request) {
 });
 
 Route::get('/balance/{userId}', [BalanceController::class, 'show']);
+Route::post('/deposit', [BalanceController::class, 'deposit']);
