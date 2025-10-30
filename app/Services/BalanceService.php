@@ -8,8 +8,9 @@ use App\Models\User;
 use App\Models\Balance;
 use App\Models\Transaction;
 use Illuminate\Support\Facades\DB;
-use InvalidArgumentException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use InvalidArgumentException;
+use DomainException;
 
 final class BalanceService
 {
@@ -67,6 +68,42 @@ final class BalanceService
             ]);
 
             return $newBalance;
+        });
+    }
+
+    /** Списание средств пользователя */
+    public function withdraw(int $userId, string $amount, ?string $comment = null): string
+    {
+        return DB::transaction(function () use ($userId, $amount, $comment) {
+             // блокируем баланс пользователя
+            $balanceRow = Balance::where('user_id', $userId)->lockForUpdate()->first();
+            $currentStr = $balanceRow?->balance ?? '0.00';
+
+            // Проверка «не уходим в минус»
+            $current = (float) $currentStr;
+            $delta   = (float) $amount;
+
+            if ($current < $delta) {
+                throw new DomainException('Недостаточно средств');
+            }
+
+            $new = number_format($current - $delta, 2, '.', '');
+
+            if ($balanceRow) {
+                $balanceRow->update(['balance' => $new]);
+            } else {
+                Balance::create(['user_id' => $userId, 'balance' => $new]);
+            }
+
+            Transaction::create([
+                'user_id'        => $userId,
+                'type'           => Transaction::TYPE_WITHDRAW,
+                'amount'         => number_format((float)$amount, 2, '.', ''),
+                'comment'        => $comment,
+                'related_user_id'=> null,
+            ]);
+
+            return $new;
         });
     }
 }

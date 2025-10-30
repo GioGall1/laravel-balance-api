@@ -6,8 +6,10 @@ use App\Services\BalanceService;
 use Illuminate\Http\JsonResponse;
 use App\Http\Requests\DepositRequest;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use App\Http\Requests\WithdrawRequest;
 use InvalidArgumentException;
 use Throwable;
+use DomainException;
 
 class BalanceController extends Controller
 {
@@ -62,6 +64,30 @@ class BalanceController extends Controller
         } catch (InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         } catch (Throwable $e) {
+            return response()->json(['message' => 'Internal server error'], 500);
+        }
+    }
+
+    /**
+     * Списание средств пользователя
+     */
+    public function withdraw(WithdrawRequest $request): JsonResponse
+    {
+        try {
+        $userId  = (int) $request->integer('user_id');
+        $amount  = (string) $request->input('amount');
+        $comment = (string) $request->input('comment', '');
+
+        $balance = $this->balanceService->withdraw($userId, $amount, $comment);
+
+        return response()->json([
+            'user_id' => $userId,
+            'balance' => (float) $balance,
+        ], 200);
+
+        } catch (DomainException $e) {
+            return response()->json(['error' => $e->getMessage()], 409); // недостаточно средств
+        } catch (\Throwable $e) {
             return response()->json(['message' => 'Internal server error'], 500);
         }
     }
