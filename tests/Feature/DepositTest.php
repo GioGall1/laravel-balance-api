@@ -5,12 +5,13 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class DepositTest extends TestCase
 {
    use RefreshDatabase;
 
-    /** @test */
+    #[Test]
     public function it_deposits_money_and_creates_balance_and_transaction()
     {
         $user = User::factory()->create();
@@ -41,7 +42,7 @@ class DepositTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_accumulates_balance_on_multiple_deposits()
     {
         $user = User::factory()->create();
@@ -60,7 +61,7 @@ class DepositTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_validates_amount_min_0_01()
     {
         $user = User::factory()->create();
@@ -71,7 +72,7 @@ class DepositTest extends TestCase
         ])->assertStatus(422);
     }
 
-    /** @test */
+    #[Test]
     public function it_validates_user_existence()
     {
         $this->postJson('/api/deposit', [

@@ -5,12 +5,13 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class WithdrawTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @test */
+    #[Test]
     public function withdraws_money_when_balance_is_enough()
     {
         $u = User::factory()->create();
@@ -22,7 +23,7 @@ class WithdrawTest extends TestCase
         $this->assertDatabaseHas('transactions', ['user_id'=>$u->id,'type'=>'withdraw','amount'=>'40.00']);
     }
 
-    /** @test */
+    #[Test]
     public function returns_409_if_insufficient_funds()
     {
         $u = User::factory()->create();
