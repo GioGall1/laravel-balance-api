@@ -1,0 +1,43 @@
+{
+	"info": {
+		"_postman_id": "d4bff1d3-82dc-4d6c-8816-cf093bc83aee",
+		"name": "Laravel Balance API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "49676715",
+		"_collection_link": "https://giogall1-3268583.postman.co/workspace/Gio-Team's-Workspace~af91e91e-0907-41e1-8994-982707576655/collection/49676715-d4bff1d3-82dc-4d6c-8816-cf093bc83aee?action=share&source=collection_link&creator=49676715"
+	},
+	"item": [
+		{
+			"name": "Deposit",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": []
+		},
+		{
+			"name": "Withdraw",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": []
+		},
+		{
+			"name": "Transfer",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": []
+		},
+		{
+			"name": "Balance",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": []
+		}
+	]
+}
